@@ -1,0 +1,13 @@
+# Binary
+logpipe
+
+# Go
+*.exe
+*.out
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
