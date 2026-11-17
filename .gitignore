@@ -11,3 +11,8 @@ logpipe
 
 # OS
 .DS_Store
+
+# Go test artifacts
+*.test
+coverage.out
+coverage.html

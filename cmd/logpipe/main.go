@@ -29,36 +29,16 @@ func main() {
 		fmt.Println("  run              Run backend process")
 
 	case "run":
-		runArgs := os.Args[2:]
-
-		logPath, err := defaultLogPath()
+		command, args, logPath, err := parseRunArgs(os.Args[2:])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "[LOGPIPE] %v\n", err)
 			os.Exit(1)
 		}
 
-		if len(runArgs) > 0 && runArgs[0] == "--log-file" {
-			if len(runArgs) < 2 || runArgs[1] == "--" {
-				fmt.Fprintln(os.Stderr, "[LOGPIPE] --log-file requires a file path")
-				os.Exit(1)
-			}
-			logPath = runArgs[1]
-			runArgs = runArgs[2:]
-		}
-
-		if len(runArgs) < 2 || runArgs[0] != "--" {
-			fmt.Println("Usage: logpipe run [--log-file <path>] -- <command> [args...]")
-			return
-		}
-
-		command := runArgs[1]
-		args := runArgs[2:]
-
 		if err := process.Run(command, args, logPath); err != nil {
 			fmt.Fprintf(os.Stderr, "[LOGPIPE] %v\n", err)
 			os.Exit(1)
 		}
-
 	default:
 		fmt.Printf("Unknown command: %s\n", os.Args[1])
 	}
@@ -77,4 +57,29 @@ func defaultLogPath() (string, error) {
 	}
 
 	return filepath.Join(stateDir, "logpipe", "logs.jsonl"), nil
+}
+
+func parseRunArgs(args []string) (string, []string, string, error) {
+	logPath, err := defaultLogPath()
+	if err != nil {
+		return "", nil, "", err
+	}
+
+	if len(args) > 0 && args[0] == "--log-file" {
+		if len(args) < 2 || args[1] == "--" {
+			return "", nil, "", fmt.Errorf("--log-file requires a file path")
+		}
+
+		logPath = args[1]
+		args = args[2:]
+	}
+
+	if len(args) < 2 || args[0] != "--" {
+		return "", nil, "", fmt.Errorf("usage: logpipe run [--log-file <path>] -- <command> [args...]")
+	}
+
+	command := args[1]
+	commandArgs := args[2:]
+
+	return command, commandArgs, logPath, nil
 }
