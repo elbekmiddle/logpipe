@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func Stream(reader io.Reader, output io.Writer, stream string) error {
+func Stream(reader io.Reader, output io.Writer, stream string, writer *Writer) error {
 	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
@@ -17,9 +17,15 @@ func Stream(reader io.Reader, output io.Writer, stream string) error {
 			Message:   scanner.Text(),
 		}
 
+		if writer != nil {
+			if err := writer.Write(entry); err != nil {
+				return fmt.Errorf("store log entry: %w", err)
+			}
+		}
+
 		if _, err := fmt.Fprintf(
 			output,
-			"[%s] %s\n",
+			"[%s] [%s] %s\n",
 			entry.Timestamp.Format("2006-01-02 15:04:05"),
 			entry.Stream,
 			entry.Message,

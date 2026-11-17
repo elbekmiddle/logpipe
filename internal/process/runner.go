@@ -1,9 +1,7 @@
 package process
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"logpipe/internal/collector"
 	"os"
 	"os/exec"
@@ -13,7 +11,7 @@ import (
 	"time"
 )
 
-func Run(command string, args []string) error {
+func Run(command string, args []string, logPath string) error {
 	cmd := exec.Command(command, args...)
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -29,6 +27,12 @@ func Run(command string, args []string) error {
 	if err != nil {
 		return fmt.Errorf("stderr pipe: %w", err)
 	}
+
+	writer, err := collector.NewWriter(logPath)
+	if err != nil {
+		return fmt.Errorf("create log writer: %w", err)
+	}
+	defer writer.Close()
 
 	signalChan := make(chan os.Signal, 1)
 
@@ -52,7 +56,7 @@ func Run(command string, args []string) error {
 	go func() {
 		defer wg.Done()
 
-		if err := collector.Stream(stdout, os.Stdout, "STDOUT"); err != nil {
+		if err := collector.Stream(stdout, os.Stdout, "STDOUT", writer); err != nil {
 			fmt.Fprintf(os.Stderr, "[LOGPIPE] %v\n", err)
 		}
 	}()
@@ -60,7 +64,7 @@ func Run(command string, args []string) error {
 	go func() {
 		defer wg.Done()
 
-		if err := collector.Stream(stderr, os.Stderr, "STDERR"); err != nil {
+		if err := collector.Stream(stderr, os.Stderr, "STDERR", writer); err != nil {
 			fmt.Fprintf(os.Stderr, "[LOGPIPE] %v\n", err)
 		}
 	}()
@@ -122,18 +126,4 @@ func Run(command string, args []string) error {
 	fmt.Println("[LOGPIPE] Exit code: 0")
 
 	return nil
-}
-
-func streamLogs(reader io.Reader, output io.Writer, stream string, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	scanner := bufio.NewScanner(reader)
-
-	for scanner.Scan() {
-		fmt.Fprintf(output, "[%s] %s\n", stream, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintf(os.Stderr, "[LOGPIPE] %s read error: %v\n", stream, err)
-	}
 }
