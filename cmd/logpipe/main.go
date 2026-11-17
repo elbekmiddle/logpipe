@@ -37,7 +37,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		if len(runArgs) >= 2 && runArgs[0] == "--log-file" {
+		if len(runArgs) > 0 && runArgs[0] == "--log-file" {
+			if len(runArgs) < 2 || runArgs[1] == "--" {
+				fmt.Fprintln(os.Stderr, "[LOGPIPE] --log-file requires a file path")
+				os.Exit(1)
+			}
 			logPath = runArgs[1]
 			runArgs = runArgs[2:]
 		}
